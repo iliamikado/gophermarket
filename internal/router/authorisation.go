@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -21,20 +20,17 @@ type Claims struct {
 func authMiddleware(next http.Handler) http.Handler{
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("JWT")
-		fmt.Println(err)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		token := cookie.Value
 		userLogin, err := getUserLogin(token)
-		fmt.Println(err)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		fmt.Println(userLogin)
 		r = r.WithContext(context.WithValue(r.Context(), userLoginKey{}, userLogin))
 		next.ServeHTTP(w, r)
 	})
