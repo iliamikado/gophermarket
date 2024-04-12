@@ -24,6 +24,8 @@ func CreateTables() {
 	)`)
 	DB.Exec(`CREATE TABLE IF NOT EXISTS orders (
 		id TEXT PRIMARY KEY NOT NULL,
+		status TEXT,
+		accural INTEGER,
 		user_login TEXT REFERENCES users (login),
 		date TIMESTAMP NOT NULL DEFAULT NOW()
 	)`)
@@ -50,8 +52,8 @@ func IsValidUser(login, password string) bool {
 	return password == passwordHash
 }
 
-func AddNewOrder(orderNumber, login string) {
-	DB.Exec(`INSERT INTO orders (id, user_login) VALUES ($1, $2)`, orderNumber, login)
+func AddNewOrder(order models.Order, login string) {
+	DB.Exec(`INSERT INTO orders (id, status, accural, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accural, login)
 }
 
 func FindOrder(orderNumber string) (string, bool) {
@@ -65,13 +67,14 @@ func FindOrder(orderNumber string) (string, bool) {
 }
 
 func GetUsersOrders(login string) []models.Order {
-	rows, _ := DB.Query(`SELECT id, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
+	rows, _ := DB.Query(`SELECT id, status, accural, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
 	ans := make([]models.Order, 0)
 	for rows.Next() {
-		var number string
+		var number, status string
+		var accural int
 		var date time.Time
-		rows.Scan(&number, &date)
-		ans = append(ans, models.Order{Number: number, Date: date.Format(time.RFC3339)})
+		rows.Scan(&number, &status, &accural, &date)
+		ans = append(ans, models.Order{Number: number, Status: status, Accural: accural, Date: date.Format(time.RFC3339)})
 	}
 	if err := rows.Err(); err != nil {
 		panic(err)

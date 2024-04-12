@@ -78,13 +78,18 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	go db.AddNewOrder(number, login)
+	go func() {
+		order := models.Order{Number: number}
+		getInfoAboutOrder(&order, &http.Client{})
+		db.AddNewOrder(order, login)
+	}()
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func getOrders(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	orders := db.GetUsersOrders(login)
+	w.Header().Set("Content-Type", "application/json")
 	if len(orders) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -92,28 +97,17 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{}
 	wg := sync.WaitGroup{}
 	for i := range orders {
+		if (orders[i].Status == "INVALID" || orders[i].Status == "PROCESSED") {
+			continue
+		}
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			req, _ := http.NewRequest(http.MethodGet, config.AccrualSystemAddress + "/" + orders[i].Number, nil)
-			resp, err := client.Do(req)
-			if err != nil || resp.StatusCode != http.StatusOK {
-				orders[i].Status = "INVALID"
-				return
-			}
-			var orderStatus models.Order
-			dec := json.NewDecoder(resp.Body)
-			defer resp.Body.Close()
-			dec.Decode(&orderStatus)
-			orders[i].Status = orderStatus.Status
-			if (orderStatus.Accural != 0) {
-				orders[i].Accural = orderStatus.Accural
-			}
+			getInfoAboutOrder(&orders[i], client)
 		}(i)
 	}
 	wg.Wait()
 	resp, _ := json.Marshal(orders)
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
@@ -145,4 +139,17 @@ func readBody(r *http.Request, dst interface{}) error {
 	defer r.Body.Close()
 	err := dec.Decode(dst)
 	return err
+}
+
+func getInfoAboutOrder(order *models.Order, client *http.Client) {
+	req, _ := http.NewRequest(http.MethodGet, config.AccrualSystemAddress + "/" + order.Number, nil)
+	resp, _ := client.Do(req)
+	var orderStatus models.Order
+	dec := json.NewDecoder(resp.Body)
+	defer resp.Body.Close()
+	dec.Decode(&orderStatus)
+	order.Status = orderStatus.Status
+	if (orderStatus.Accural != 0) {
+		order.Accural = orderStatus.Accural
+	}
 }
