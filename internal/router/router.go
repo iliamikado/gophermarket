@@ -94,8 +94,13 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 	for i := range orders {
 		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
 			req, _ := http.NewRequest(http.MethodGet, config.AccrualSystemAddress + "/" + orders[i].Number, nil)
-			resp, _ := client.Do(req)
+			resp, err := client.Do(req)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				orders[i].Status = "INVALID"
+				return
+			}
 			var orderStatus models.Order
 			dec := json.NewDecoder(resp.Body)
 			defer resp.Body.Close()
@@ -104,7 +109,6 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 			if (orderStatus.Accural != 0) {
 				orders[i].Accural = orderStatus.Accural
 			}
-			wg.Done()
 		}(i)
 	}
 	wg.Wait()
