@@ -109,6 +109,7 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	wg.Wait()
 	resp, _ := json.Marshal(orders)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
