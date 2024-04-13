@@ -12,7 +12,7 @@ import (
 	"github.com/iliamikado/gophermarket/internal/models"
 )
 
-func AppRouter() *chi.Mux{
+func AppRouter() *chi.Mux {
 	r := chi.NewRouter()
 	r.Post("/api/user/register", register)
 	r.Post("/api/user/login", login)
@@ -37,7 +37,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if (db.IsLoginExist(user.Login)) {
+	if db.IsLoginExist(user.Login) {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
@@ -55,7 +55,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if (!db.IsValidUser(user.Login, user.Password)) {
+	if !db.IsValidUser(user.Login, user.Password) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -69,13 +69,13 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	number := string(body)
 	logger.Log("Post order number " + number + ", login - " + login)
-	if (err != nil) {
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	ordersUserLogin, exists := db.FindOrder(number)
-	if (exists) {
-		if (ordersUserLogin == login) {
+	if exists {
+		if ordersUserLogin == login {
 			w.WriteHeader(http.StatusOK)
 		} else {
 			w.WriteHeader(http.StatusConflict)
@@ -105,7 +105,7 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	wg := sync.WaitGroup{}
 	for i, order := range orders {
-		if (order.Status == "INVALID" || order.Status == "PROCESSED") {
+		if order.Status == "INVALID" || order.Status == "PROCESSED" {
 			continue
 		}
 		wg.Add(1)
@@ -113,7 +113,7 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			order := getOrderInfo(orders[i].Number)
 			orders[i].Status = order.Status
-			orders[i].Accural = order.Accural
+			orders[i].Accrual = order.Accrual
 		}(i)
 	}
 	wg.Wait()
@@ -123,20 +123,20 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 func getWithdawals(w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 func mockedGetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	number := chi.URLParam(r, "number")
-	order := models.Order{Number: number, Status: "PROCESSED", Accural: float64(455.34)}
+	order := models.Order{Number: number, Status: "PROCESSED", Accrual: float64(455.34)}
 	body, _ := json.Marshal(order)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

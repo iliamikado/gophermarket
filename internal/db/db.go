@@ -26,7 +26,7 @@ func CreateTables() {
 	DB.Exec(`CREATE TABLE IF NOT EXISTS orders (
 		id TEXT PRIMARY KEY NOT NULL,
 		status TEXT,
-		accural DECIMAL,
+		accrual DECIMAL,
 		user_login TEXT REFERENCES users (login),
 		date TIMESTAMP NOT NULL DEFAULT NOW()
 	)`)
@@ -45,7 +45,7 @@ func AddNewUser(login, password string) {
 
 func IsValidUser(login, password string) bool {
 	row := DB.QueryRow(`SELECT password FROM users WHERE login = $1`, login)
-	if (row == nil) {
+	if row == nil {
 		return false
 	}
 	var passwordHash string
@@ -54,11 +54,11 @@ func IsValidUser(login, password string) bool {
 }
 
 func AddNewOrder(order models.Order, login string) {
-	DB.Exec(`INSERT INTO orders (id, status, accural, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accural, login)
+	DB.Exec(`INSERT INTO orders (id, status, accrual, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accrual, login)
 }
 
 func UpdateOrder(order models.Order) {
-	DB.Exec(`UPDATE orders SET (status, accural) = ($1, $2) WHERE id = $3`, order.Status, order.Accural, order.Number)
+	DB.Exec(`UPDATE orders SET (status, accrual) = ($1, $2) WHERE id = $3`, order.Status, order.Accrual, order.Number)
 }
 
 func FindOrder(orderNumber string) (string, bool) {
@@ -72,17 +72,17 @@ func FindOrder(orderNumber string) (string, bool) {
 }
 
 func GetUsersOrders(login string) []models.Order {
-	rows, err := DB.Query(`SELECT id, status, accural, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
-	if (err != nil) {
+	rows, err := DB.Query(`SELECT id, status, accrual, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
+	if err != nil {
 		logger.Log(err)
 	}
 	ans := make([]models.Order, 0)
 	for rows.Next() {
 		var number, status string
-		var accural float64
+		var accrual float64
 		var date time.Time
-		rows.Scan(&number, &status, &accural, &date)
-		ans = append(ans, models.Order{Number: number, Status: status, Accural: accural, Date: date.Format(time.RFC3339)})
+		rows.Scan(&number, &status, &accrual, &date)
+		ans = append(ans, models.Order{Number: number, Status: status, Accrual: accrual, Date: date.Format(time.RFC3339)})
 	}
 	if err := rows.Err(); err != nil {
 		logger.Log(err)
