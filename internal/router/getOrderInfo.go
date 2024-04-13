@@ -22,8 +22,8 @@ func getOrderInfo(orderNumber string) models.Order {
 	resp, err2 := client.Do(req)
 	logger.Log("Get info for order " + orderNumber)
 	if err1 != nil || err2 != nil || resp.StatusCode != 200 {
-		logger.Log(err1.Error())
-		logger.Log(err2.Error())
+		logger.Log(err1)
+		logger.Log(err2)
 		logger.Log(resp.Status)
 		return models.Order{Number: orderNumber}
 	}
