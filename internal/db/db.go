@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/iliamikado/gophermarket/internal/logger"
 	"github.com/iliamikado/gophermarket/internal/models"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -71,7 +72,10 @@ func FindOrder(orderNumber string) (string, bool) {
 }
 
 func GetUsersOrders(login string) []models.Order {
-	rows, _ := DB.Query(`SELECT id, status, accural, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
+	rows, err := DB.Query(`SELECT id, status, accural, date FROM orders WHERE user_login = $1 ORDER BY date`, login)
+	if (err != nil) {
+		logger.Log(err)
+	}
 	ans := make([]models.Order, 0)
 	for rows.Next() {
 		var number, status string
@@ -81,6 +85,7 @@ func GetUsersOrders(login string) []models.Order {
 		ans = append(ans, models.Order{Number: number, Status: status, Accural: accural, Date: date.Format(time.RFC3339)})
 	}
 	if err := rows.Err(); err != nil {
+		logger.Log(err)
 		panic(err)
 	}
 	return ans

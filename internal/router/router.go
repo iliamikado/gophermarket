@@ -92,11 +92,12 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 func getOrders(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	orders := db.GetUsersOrders(login)
+	logger.Log(orders)
 	msg := ""
 	for _, order := range orders {
 		msg += "(" + order.Number + ", " + order.Status + ") "
 	}
-	logger.Log("Get order from login " + login + ": " + msg)
+	logger.Log("Get orders from login " + login + ": " + msg)
 	w.Header().Set("Content-Type", "application/json")
 	if len(orders) == 0 {
 		w.WriteHeader(http.StatusNoContent)
