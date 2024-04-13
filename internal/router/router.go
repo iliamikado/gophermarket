@@ -83,7 +83,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db.AddNewOrder(models.Order{Number: number}, login)
-	go func() {
+	func() {
 		getOrderInfo(number)
 	}()
 	w.WriteHeader(http.StatusAccepted)
@@ -136,7 +136,7 @@ func getWithdawals(w http.ResponseWriter, r *http.Request) {
 
 func mockedGetOrderStatus(w http.ResponseWriter, r *http.Request) {
 	number := chi.URLParam(r, "number")
-	order := models.Order{Number: number, Status: "PROCESSED", Accural: 500}
+	order := models.Order{Number: number, Status: "PROCESSED", Accural: float64(455.34)}
 	body, _ := json.Marshal(order)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
