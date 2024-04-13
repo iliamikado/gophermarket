@@ -26,7 +26,7 @@ func CreateTables() {
 	DB.Exec(`CREATE TABLE IF NOT EXISTS orders (
 		id TEXT PRIMARY KEY NOT NULL,
 		status TEXT,
-		accural INTEGER,
+		accural DECIMAL,
 		user_login TEXT REFERENCES users (login),
 		date TIMESTAMP NOT NULL DEFAULT NOW()
 	)`)
@@ -79,7 +79,7 @@ func GetUsersOrders(login string) []models.Order {
 	ans := make([]models.Order, 0)
 	for rows.Next() {
 		var number, status string
-		var accural int
+		var accural float64
 		var date time.Time
 		rows.Scan(&number, &status, &accural, &date)
 		ans = append(ans, models.Order{Number: number, Status: status, Accural: accural, Date: date.Format(time.RFC3339)})

@@ -9,5 +9,5 @@ type Order struct {
 	Number		string	`json:"number"`
 	Date 		string	`json:"uploaded_at"`
 	Status 		string	`json:"status"`
-	Accural 	int		`json:"accural,omitempty"`
+	Accural 	float64		`json:"accural,omitempty"`
 }
