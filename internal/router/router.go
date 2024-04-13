@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/go-chi/chi"
-	"github.com/iliamikado/gophermarket/internal/config"
 	"github.com/iliamikado/gophermarket/internal/db"
 	"github.com/iliamikado/gophermarket/internal/models"
 )
@@ -79,8 +78,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	go func() {
-		order := models.Order{Number: number}
-		getInfoAboutOrder(&order, &http.Client{})
+		order := getOrderInfo(number)
 		db.AddNewOrder(order, login)
 	}()
 	w.WriteHeader(http.StatusAccepted)
@@ -94,16 +92,17 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	client := &http.Client{}
 	wg := sync.WaitGroup{}
-	for i := range orders {
-		if (orders[i].Status == "INVALID" || orders[i].Status == "PROCESSED") {
+	for i, order := range orders {
+		if (order.Status == "INVALID" || order.Status == "PROCESSED") {
 			continue
 		}
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			getInfoAboutOrder(&orders[i], client)
+			order := getOrderInfo(orders[i].Number)
+			orders[i].Status = order.Status
+			orders[i].Accural = order.Accural
 		}(i)
 	}
 	wg.Wait()
@@ -139,17 +138,4 @@ func readBody(r *http.Request, dst interface{}) error {
 	defer r.Body.Close()
 	err := dec.Decode(dst)
 	return err
-}
-
-func getInfoAboutOrder(order *models.Order, client *http.Client) {
-	req, _ := http.NewRequest(http.MethodGet, config.AccrualSystemAddress + "/" + order.Number, nil)
-	resp, _ := client.Do(req)
-	var orderStatus models.Order
-	dec := json.NewDecoder(resp.Body)
-	defer resp.Body.Close()
-	dec.Decode(&orderStatus)
-	order.Status = orderStatus.Status
-	if (orderStatus.Accural != 0) {
-		order.Accural = orderStatus.Accural
-	}
 }
