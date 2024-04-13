@@ -26,5 +26,6 @@ func ParseConfig() {
 	if accrualSystemAddress := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); accrualSystemAddress != "" {
 		AccrualSystemAddress = accrualSystemAddress
 	}
+	AccrualSystemAddress += "/api/orders/"
 	
 }

@@ -24,7 +24,7 @@ func AppRouter() *chi.Mux{
 		r.Post("/api/user/balance/withdraw", pointsWithdraw)
 		r.Get("/api/user/withdrawals", getWithdawals)
 	})
-	r.Get("/mock/{number}", mockedGetOrderStatus)
+	r.Get("/mock/api/orders/{number}", mockedGetOrderStatus)
 	return r
 }
 
