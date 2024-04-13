@@ -8,6 +8,7 @@ import (
 
 	"github.com/iliamikado/gophermarket/internal/config"
 	"github.com/iliamikado/gophermarket/internal/db"
+	"github.com/iliamikado/gophermarket/internal/logger"
 	"github.com/iliamikado/gophermarket/internal/models"
 )
 
@@ -19,13 +20,17 @@ func getOrderInfo(orderNumber string) models.Order {
 	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress+ "/" + orderNumber, nil)
 	resp, err2 := client.Do(req)
+	logger.Log("Get info for order " + orderNumber)
 	if err1 != nil || err2 != nil {
+		logger.Log(err1.Error())
+		logger.Log(err2.Error())
 		return models.Order{Number: orderNumber}
 	}
 	var order models.Order
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	dec.Decode(&order)
+	logger.Log("Finally get " + orderNumber + " " + order.Status)
 	go db.UpdateOrder(order)
 	return order
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/iliamikado/gophermarket/internal/db"
+	"github.com/iliamikado/gophermarket/internal/logger"
 	"github.com/iliamikado/gophermarket/internal/models"
 )
 
@@ -29,8 +30,9 @@ func AppRouter() *chi.Mux{
 
 func register(w http.ResponseWriter, r *http.Request) {
 	var user models.User
-
 	err := readBody(r, &user)
+
+	logger.Log("Register user " + user.Login)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -47,6 +49,8 @@ func register(w http.ResponseWriter, r *http.Request) {
 func login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 	err := readBody(r, &user)
+
+	logger.Log("Login user " + user.Login)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -64,6 +68,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	number := string(body)
+	logger.Log("Post order number " + number + ", login - " + login)
 	if (err != nil) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -87,6 +92,11 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 func getOrders(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	orders := db.GetUsersOrders(login)
+	msg := ""
+	for _, order := range orders {
+		msg += "(" + order.Number + ", " + order.Status + ") "
+	}
+	logger.Log("Get order from login " + login + ": " + msg)
 	w.Header().Set("Content-Type", "application/json")
 	if len(orders) == 0 {
 		w.WriteHeader(http.StatusNoContent)

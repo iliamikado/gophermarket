@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/iliamikado/gophermarket/internal/router"
-	"github.com/iliamikado/gophermarket/internal/db"
 	"github.com/iliamikado/gophermarket/internal/config"
+	"github.com/iliamikado/gophermarket/internal/db"
+	"github.com/iliamikado/gophermarket/internal/logger"
+	"github.com/iliamikado/gophermarket/internal/router"
 )
 
 func main() {
@@ -20,6 +20,6 @@ func main() {
 func run() error {
 	r := router.AppRouter()
 	db.Initialize(config.DatabaseURI)
-	fmt.Println("start server")
+	logger.Log("Start server on " + config.RunAddress)
 	return http.ListenAndServe(config.RunAddress, r)
 }
