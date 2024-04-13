@@ -18,12 +18,13 @@ func getOrderInfo(orderNumber string) models.Order {
 	client := &http.Client{}
 	ctx, cancel := context.WithTimeout(context.Background(), MaxResponseTime)
 	defer cancel()
-	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress+ "/" + orderNumber, nil)
+	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + orderNumber, nil)
 	resp, err2 := client.Do(req)
 	logger.Log("Get info for order " + orderNumber)
-	if err1 != nil || err2 != nil {
+	if err1 != nil || err2 != nil || resp.StatusCode != 200 {
 		logger.Log(err1.Error())
 		logger.Log(err2.Error())
+		logger.Log(resp.Status)
 		return models.Order{Number: orderNumber}
 	}
 	var order models.Order

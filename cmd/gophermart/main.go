@@ -20,6 +20,7 @@ func main() {
 func run() error {
 	r := router.AppRouter()
 	db.Initialize(config.DatabaseURI)
+	logger.Log("Out api - " + config.AccrualSystemAddress)
 	logger.Log("Start server on " + config.RunAddress)
 	return http.ListenAndServe(config.RunAddress, r)
 }
