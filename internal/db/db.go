@@ -56,6 +56,10 @@ func AddNewOrder(order models.Order, login string) {
 	DB.Exec(`INSERT INTO orders (id, status, accural, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accural, login)
 }
 
+func UpdateOrder(order models.Order) {
+	DB.Exec(`UPDATE orders SET (status, accural) = ($1, $2) WHERE id = $3`, order.Status, order.Accural, order.Number)
+}
+
 func FindOrder(orderNumber string) (string, bool) {
 	row := DB.QueryRow(`SELECT user_login FROM orders WHERE id = $1`, orderNumber)
 	var login string

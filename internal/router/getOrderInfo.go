@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iliamikado/gophermarket/internal/config"
+	"github.com/iliamikado/gophermarket/internal/db"
 	"github.com/iliamikado/gophermarket/internal/models"
 )
 
@@ -25,5 +26,6 @@ func getOrderInfo(orderNumber string) models.Order {
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	dec.Decode(&order)
+	go db.UpdateOrder(order)
 	return order
 }
