@@ -73,6 +73,10 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if !checkOrderNumber(number) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
 	ordersUserLogin, exists := db.FindOrder(number)
 	if exists {
 		if ordersUserLogin == login {
@@ -128,6 +132,10 @@ func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
 	var withdrawReq models.WithdrawRequest
 	readBody(r, &withdrawReq)
 
+	if !checkOrderNumber(withdrawReq.Order) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		return
+	}
 	orders := db.GetUsersOrders(login)
 	updateOrderInfos(orders)
 	var sum float64 = 0
