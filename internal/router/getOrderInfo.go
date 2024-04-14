@@ -31,7 +31,6 @@ func getOrderInfo(orderNumber string) models.Order {
 	var order models.Order
 	dec := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
-	order.Status = "PROCESSING"
 	dec.Decode(&order)
 	order.Number = orderNumber
 	logger.Log("Finally get " + orderNumber + ":")
