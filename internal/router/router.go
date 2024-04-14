@@ -2,9 +2,9 @@ package router
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
-	"sync"
 
 	"github.com/go-chi/chi"
 	"github.com/iliamikado/gophermarket/internal/db"
@@ -22,7 +22,7 @@ func AppRouter() *chi.Mux {
 		r.Get("/api/user/orders", getOrders)
 		r.Get("/api/user/balance", getBalance)
 		r.Post("/api/user/balance/withdraw", pointsWithdraw)
-		r.Get("/api/user/withdrawals", getWithdawals)
+		r.Get("/api/user/withdrawals", getWithdrawals)
 	})
 	r.Get("/mock/api/orders/{number}", mockedGetOrderStatus)
 	return r
@@ -92,45 +92,70 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 func getOrders(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	orders := db.GetUsersOrders(login)
+	logger.Log("Get orders from login " + login + ":")
 	logger.Log(orders)
-	msg := ""
-	for _, order := range orders {
-		msg += "(" + order.Number + ", " + order.Status + ") "
-	}
-	logger.Log("Get orders from login " + login + ": " + msg)
-	w.Header().Set("Content-Type", "application/json")
 	if len(orders) == 0 {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	wg := sync.WaitGroup{}
-	for i, order := range orders {
-		if order.Status == "INVALID" || order.Status == "PROCESSED" {
-			continue
-		}
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			order := getOrderInfo(orders[i].Number)
-			orders[i].Status = order.Status
-			orders[i].Accrual = order.Accrual
-		}(i)
-	}
-	wg.Wait()
+	updateOrderInfos(orders)
 	resp, _ := json.Marshal(orders)
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request) {
-
+	login := r.Context().Value(userLoginKey{}).(string)
+	logger.Log("Getting balance for login - " + login)
+	orders := db.GetUsersOrders(login)
+	updateOrderInfos(orders)
+	var sum float64 = 0
+	for _, order := range orders {
+		sum += order.Accrual
+	}
+	withdrawn := db.GetWithdrawn(login)
+	logger.Log(fmt.Sprintf("Sum in orders = %g, withdrawn = %g", sum, withdrawn))
+	ans := models.Balance{Current: sum - withdrawn, Withdrawn: withdrawn}
+	body, _ := json.Marshal(ans)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(body)
 }
 
 func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
+	login := r.Context().Value(userLoginKey{}).(string)
+	logger.Log("Withdraw points from login - " + login)
+	var withdrawReq models.WithdrawRequest
+	readBody(r, &withdrawReq)
 
+	orders := db.GetUsersOrders(login)
+	updateOrderInfos(orders)
+	var sum float64 = 0
+	for _, order := range orders {
+		sum += order.Accrual
+	}
+	alreadyWithdrawn := db.GetWithdrawn(login)
+	logger.Log(fmt.Sprintf("Sum in orders = %g, alreadyWothdrawn = %g, want to withdraw = %g", sum, alreadyWithdrawn, withdrawReq.Sum))
+	if sum - alreadyWithdrawn < withdrawReq.Sum {
+		w.WriteHeader(http.StatusPaymentRequired)
+		return
+	}
+
+	db.Withdraw(login, withdrawReq.Order, withdrawReq.Sum)
+	w.WriteHeader(http.StatusOK)
 }
 
-func getWithdawals(w http.ResponseWriter, r *http.Request) {
+func getWithdrawals(w http.ResponseWriter, r *http.Request) {
+	login := r.Context().Value(userLoginKey{}).(string)
+	withdrawals := db.GetAllWithdrawals(login)
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	body, _ := json.Marshal(withdrawals)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
 
 }
 

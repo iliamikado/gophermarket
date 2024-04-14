@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/iliamikado/gophermarket/internal/config"
@@ -35,4 +36,21 @@ func getOrderInfo(orderNumber string) models.Order {
 	logger.Log(order)
 	db.UpdateOrder(order)
 	return order
+}
+
+func updateOrderInfos(orders []models.Order) {
+	wg := sync.WaitGroup{}
+	for i, order := range orders {
+		if order.Status == "INVALID" || order.Status == "PROCESSED" {
+			continue
+		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			order := getOrderInfo(orders[i].Number)
+			orders[i].Status = order.Status
+			orders[i].Accrual = order.Accrual
+		}(i)
+	}
+	wg.Wait()
 }
