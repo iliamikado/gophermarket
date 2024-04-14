@@ -26,7 +26,7 @@ func CreateTables() {
 	)`)
 	DB.Exec(`CREATE TABLE IF NOT EXISTS orders (
 		id TEXT PRIMARY KEY NOT NULL,
-		status TEXT NOT NULL DEFAULT "NEW",
+		status TEXT NOT NULL DEFAULT 'NEW',
 		accrual DECIMAL,
 		user_login TEXT REFERENCES users (login),
 		date TIMESTAMP NOT NULL DEFAULT NOW()
