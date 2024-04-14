@@ -34,6 +34,7 @@ func getOrderInfo(orderNumber string) models.Order {
 	dec.Decode(&order)
 	logger.Log("Finally get " + orderNumber + ":")
 	logger.Log(order)
+	order.Number = orderNumber
 	db.UpdateOrder(order)
 	return order
 }
