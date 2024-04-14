@@ -26,6 +26,9 @@ func getOrderInfo(orderNumber string) models.Order {
 		logger.Log(err1)
 		logger.Log(err2)
 		logger.Log(resp.Status)
+		if resp.StatusCode == 204 {
+			return models.Order{Number: orderNumber, Status: "NEW"}
+		}
 		return models.Order{Number: orderNumber}
 	}
 	var order models.Order
