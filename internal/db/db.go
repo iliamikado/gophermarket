@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"database/sql"
 	"errors"
@@ -22,7 +23,7 @@ func Initialize(host string) {
 func CreateTables() {
 	DB.Exec(`CREATE TABLE IF NOT EXISTS users (
 		login TEXT PRIMARY KEY NOT NULL,
-		password TEXT NOT NULL,
+		password BYTEA NOT NULL,
 		withdrawn DECIMAL NOT NULL DEFAULT 0
 	)`)
 	DB.Exec(`CREATE TABLE IF NOT EXISTS orders (
@@ -49,7 +50,8 @@ func IsLoginExist(login string) bool {
 func AddNewUser(login, password string) {
 	h := sha256.New()
 	h.Write([]byte(password))
-	passwordHash := string(h.Sum(nil))
+	passwordHash := h.Sum(nil)
+	logger.Log(passwordHash)
 	DB.Exec(`INSERT INTO users VALUES ($1, $2)`, login, passwordHash)
 }
 
@@ -58,11 +60,11 @@ func IsValidUser(login, password string) bool {
 	if row == nil {
 		return false
 	}
-	var passwordHash string
+	var passwordHash []byte
 	row.Scan(&passwordHash)
 	h := sha256.New()
 	h.Write([]byte(password))
-	return string(h.Sum(nil)) == passwordHash
+	return bytes.Equal(h.Sum(nil), passwordHash)
 }
 
 func AddNewOrder(order models.Order, login string) {
