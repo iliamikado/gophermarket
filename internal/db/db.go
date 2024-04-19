@@ -1,6 +1,7 @@
 package db
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"time"
@@ -46,7 +47,9 @@ func IsLoginExist(login string) bool {
 }
 
 func AddNewUser(login, password string) {
-	passwordHash := password
+	h := sha256.New()
+	h.Write([]byte(password))
+	passwordHash := string(h.Sum(nil))
 	DB.Exec(`INSERT INTO users VALUES ($1, $2)`, login, passwordHash)
 }
 
@@ -57,7 +60,9 @@ func IsValidUser(login, password string) bool {
 	}
 	var passwordHash string
 	row.Scan(&passwordHash)
-	return password == passwordHash
+	h := sha256.New()
+	h.Write([]byte(password))
+	return string(h.Sum(nil)) == passwordHash
 }
 
 func AddNewOrder(order models.Order, login string) {

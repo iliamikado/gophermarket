@@ -6,9 +6,8 @@ import (
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/iliamikado/gophermarket/internal/config"
 )
-
-const SecretKey = "secret key"
 
 type userLoginKey struct {}
 
@@ -42,7 +41,7 @@ func getUserLogin(tokenString string) (string, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
             return nil, errors.New("unexpected signing method")
         }
-        return []byte(SecretKey), nil
+        return []byte(config.SecretKey), nil
     })
 
 	if err != nil {
@@ -62,6 +61,6 @@ func buildJWTString(userLogin string) string {
         UserLogin: userLogin,
     })
 
-    tokenString, _ := token.SignedString([]byte(SecretKey))
+    tokenString, _ := token.SignedString([]byte(config.SecretKey))
     return tokenString
 }
