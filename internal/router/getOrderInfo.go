@@ -13,7 +13,7 @@ import (
 )
 
 const MaxResponseTime = time.Second * 3
-const RepeatRequestTime = time.Second * 5
+const RepeatRequestTime = time.Second * 3
 const RepeatRequestTimeOn429 = time.Minute
 
 func updateOrderInfo(order models.Order) {
@@ -32,9 +32,9 @@ func updateOrderInfo(order models.Order) {
 		newOrder = order
 	} else {
 		dec := json.NewDecoder(resp.Body)
-		defer resp.Body.Close()
 		dec.Decode(&newOrder)
 	}
+	defer resp.Body.Close()	
 
 	if newOrder.Status != "PROCESSED" && newOrder.Status != "INVALID" {
 		go func(order models.Order) {
@@ -50,6 +50,6 @@ func updateOrderInfo(order models.Order) {
 	logger.Log("Finally get " + newOrder.Number + ":")
 	logger.Log(newOrder)
 	if order != newOrder {
-		go db.UpdateOrder(newOrder)
+		db.UpdateOrder(newOrder)
 	}
 }

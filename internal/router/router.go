@@ -88,9 +88,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	order := models.Order{Number: number, Status: "NEW"}
 	db.AddNewOrder(order, login)
-	go func() {
-		updateOrderInfo(order)
-	}()
+	updateOrderInfo(order)
 	w.WriteHeader(http.StatusAccepted)
 }
 
