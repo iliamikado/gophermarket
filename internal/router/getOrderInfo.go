@@ -19,10 +19,11 @@ const RepeatRequestTimeOn429 = time.Minute
 func updateOrderInfo(order models.Order) {
 	client := &http.Client{}
 	ctx, cancel := context.WithTimeout(context.Background(), MaxResponseTime)
-	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + order.Number, nil)
 	resp, err2 := client.Do(req)
 	logger.Log("Get info for order " + order.Number)
+	defer resp.Body.Close()
+	defer cancel()
 	
 	var newOrder models.Order
 	if err1 != nil || err2 != nil || resp.StatusCode != 200 {
@@ -33,8 +34,6 @@ func updateOrderInfo(order models.Order) {
 		dec.Decode(&newOrder)
 		newOrder.Number = order.Number
 	}
-	req.Body.Close()
-	resp.Body.Close()
 
 	if newOrder.Status != "PROCESSED" && newOrder.Status != "INVALID" {
 		go func(order models.Order) {
