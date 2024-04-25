@@ -22,13 +22,14 @@ func updateOrderInfo(order models.Order) {
 	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + order.Number, nil)
 	resp, err2 := client.Do(req)
-	logger.Log("Get info for order " + order.Number)
-
+	if err2 != nil {
+		logger.Log(err2)
+	}
 	defer resp.Body.Close()
+	logger.Log("Get info for order " + order.Number)
+	
 	var newOrder models.Order
 	if err1 != nil || err2 != nil || resp.StatusCode != 200 {
-		logger.Log(err1)
-		logger.Log(err2)
 		logger.Log(resp.Status)
 		newOrder = order
 	} else {
