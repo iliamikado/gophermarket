@@ -86,9 +86,10 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	db.AddNewOrder(models.Order{Number: number}, login)
+	order := models.Order{Number: number, Status: "NEW"}
+	db.AddNewOrder(order, login)
 	go func() {
-		getOrderInfo(number)
+		updateOrderInfo(order)
 	}()
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -102,7 +103,6 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	updateOrderInfos(orders)
 	resp, _ := json.Marshal(orders)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -113,7 +113,6 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	logger.Log("Getting balance for login - " + login)
 	orders := db.GetUsersOrders(login)
-	updateOrderInfos(orders)
 	var sum float64 = 0
 	for _, order := range orders {
 		sum += order.Accrual
@@ -137,7 +136,6 @@ func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orders := db.GetUsersOrders(login)
-	updateOrderInfos(orders)
 	var sum float64 = 0
 	for _, order := range orders {
 		sum += order.Accrual
