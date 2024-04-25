@@ -33,8 +33,9 @@ func updateOrderInfo(order models.Order) {
 	} else {
 		dec := json.NewDecoder(resp.Body)
 		dec.Decode(&newOrder)
+		newOrder.Number = order.Number
+		resp.Body.Close()
 	}
-	defer resp.Body.Close()	
 
 	if newOrder.Status != "PROCESSED" && newOrder.Status != "INVALID" {
 		go func(order models.Order) {
