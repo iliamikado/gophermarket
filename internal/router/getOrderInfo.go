@@ -23,7 +23,6 @@ func updateOrderInfo(order models.Order) {
 	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + order.Number, nil)
 	resp, err2 := client.Do(req)
-	defer resp.Body.Close()
 	logger.Log("Get info for order " + order.Number)
 	
 	var newOrder models.Order
@@ -33,7 +32,7 @@ func updateOrderInfo(order models.Order) {
 	} else {
 		body, _ := io.ReadAll(resp.Body)
 		json.Unmarshal(body, &newOrder)
-		resp.Body.Close()
+		defer resp.Body.Close()
 		newOrder.Number = order.Number
 	}
 
