@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
@@ -19,19 +20,20 @@ const RepeatRequestTimeOn429 = time.Minute
 func updateOrderInfo(order models.Order) {
 	client := &http.Client{}
 	ctx, cancel := context.WithTimeout(context.Background(), MaxResponseTime)
+	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + order.Number, nil)
 	resp, err2 := client.Do(req)
 	logger.Log("Get info for order " + order.Number)
 	defer resp.Body.Close()
-	defer cancel()
 	
 	var newOrder models.Order
 	if err1 != nil || err2 != nil || resp.StatusCode != 200 {
 		logger.Log(resp.Status)
 		newOrder = order
 	} else {
-		dec := json.NewDecoder(resp.Body)
-		dec.Decode(&newOrder)
+		body, _ := io.ReadAll(resp.Body)
+		json.Unmarshal(body, &newOrder)
+		resp.Body.Close()
 		newOrder.Number = order.Number
 	}
 
