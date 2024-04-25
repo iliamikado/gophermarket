@@ -19,16 +19,16 @@ func ParseConfig() {
 	flag.StringVar(&SecretKey, "s", "secret key", "Set secret key for coding")
 	flag.Parse()
 
-	if runAddress := os.Getenv("RUN_ADDRESS"); runAddress != "" {
+	if runAddress, exists := os.LookupEnv("RUN_ADDRESS"); exists {
 		RunAddress = runAddress
 	}
-	if databaseURI := os.Getenv("DATABASE_URI"); databaseURI != "" {
+	if databaseURI, exists := os.LookupEnv("DATABASE_URI"); exists {
 		DatabaseURI = databaseURI
 	}
-	if accrualSystemAddress := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); accrualSystemAddress != "" {
+	if accrualSystemAddress, exists := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS"); exists {
 		AccrualSystemAddress = accrualSystemAddress
 	}
-	if secretKey := os.Getenv("SECRET_KEY"); secretKey != "" {
+	if secretKey, exists := os.LookupEnv("SECRET_KEY"); exists {
 		SecretKey = secretKey
 	}
 	AccrualSystemAddress += "/api/orders/"
