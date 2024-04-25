@@ -22,6 +22,9 @@ func updateOrderInfo(order models.Order) {
 	defer cancel()
 	req, err1 := http.NewRequestWithContext(ctx, "GET", config.AccrualSystemAddress + order.Number, nil)
 	resp, err2 := client.Do(req)
+	if err2 == nil {
+		defer resp.Body.Close()
+	}
 	logger.Log("Get info for order " + order.Number)
 
 	var newOrder models.Order
@@ -34,7 +37,6 @@ func updateOrderInfo(order models.Order) {
 		dec := json.NewDecoder(resp.Body)
 		dec.Decode(&newOrder)
 		newOrder.Number = order.Number
-		resp.Body.Close()
 	}
 
 	if newOrder.Status != "PROCESSED" && newOrder.Status != "INVALID" {
