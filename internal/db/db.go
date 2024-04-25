@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/iliamikado/gophermarket/internal/config"
 	"github.com/iliamikado/gophermarket/internal/logger"
 	"github.com/iliamikado/gophermarket/internal/models"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -49,7 +50,7 @@ func IsLoginExist(login string) bool {
 
 func AddNewUser(login, password string) {
 	h := sha256.New()
-	h.Write([]byte(password))
+	h.Write([]byte(password + config.SecretKey))
 	passwordHash := h.Sum(nil)
 	logger.Log(passwordHash)
 	DB.Exec(`INSERT INTO users VALUES ($1, $2)`, login, passwordHash)
@@ -63,7 +64,7 @@ func IsValidUser(login, password string) bool {
 	var passwordHash []byte
 	row.Scan(&passwordHash)
 	h := sha256.New()
-	h.Write([]byte(password))
+	h.Write([]byte(password + config.SecretKey))
 	return bytes.Equal(h.Sum(nil), passwordHash)
 }
 
