@@ -99,7 +99,8 @@ func AddNewOrder(order models.Order, login string) error {
 			return AnotherUserAlreadyHasOrderError
 		}
 	}
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
+		tx.Rollback()
 		return err
 	}
 	_, err = tx.Exec(`INSERT INTO orders (id, status, accrual, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accrual, login)
