@@ -14,11 +14,18 @@ import (
 )
 
 var DB *sql.DB
+var UserAlreadyExistsError error
+var UserAlreadyHasOrderError error
+var AnotherUserAlreadyHasOrderError error
 
 func Initialize(host string) {
 	db, _ := sql.Open("pgx", host)
 	DB = db
 	CreateTables()
+
+	UserAlreadyExistsError = errors.New("user with this login already exists")
+	UserAlreadyHasOrderError = errors.New("user already has this order")
+	AnotherUserAlreadyHasOrderError = errors.New("another user already has this order")
 }
 
 func CreateTables() {
@@ -42,18 +49,29 @@ func CreateTables() {
 	)`)
 }
 
-func IsLoginExist(login string) bool {
-	row := DB.QueryRow(`SELECT * FROM users WHERE login = $1`, login)
-	err := row.Scan()
-	return !(err != nil && errors.Is(err, sql.ErrNoRows))
-}
+func AddNewUser(login, password string) error {
+	tx, _ := DB.Begin()
 
-func AddNewUser(login, password string) {
+	row := tx.QueryRow(`SELECT * FROM users WHERE login = $1`, login)
+	err := row.Scan()
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		tx.Rollback()
+		return err
+	} else if err == nil {
+		tx.Rollback()
+		return UserAlreadyExistsError
+	}
+
 	h := sha256.New()
 	h.Write([]byte(password + config.SecretKey))
 	passwordHash := h.Sum(nil)
 	logger.Log(passwordHash)
-	DB.Exec(`INSERT INTO users VALUES ($1, $2)`, login, passwordHash)
+	_, err = tx.Exec(`INSERT INTO users VALUES ($1, $2)`, login, passwordHash)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func IsValidUser(login, password string) bool {
@@ -68,22 +86,32 @@ func IsValidUser(login, password string) bool {
 	return bytes.Equal(h.Sum(nil), passwordHash)
 }
 
-func AddNewOrder(order models.Order, login string) {
-	DB.Exec(`INSERT INTO orders (id, status, accrual, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accrual, login)
+func AddNewOrder(order models.Order, login string) error {
+	tx, _ := DB.Begin()
+	row := tx.QueryRow(`SELECT user_login FROM orders WHERE id = $1`, order.Number)
+	var orderLogin string
+	err := row.Scan(&orderLogin)
+	if err == nil {
+		tx.Rollback()
+		if orderLogin == login {
+			return UserAlreadyHasOrderError
+		} else {
+			return AnotherUserAlreadyHasOrderError
+		}
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	_, err = tx.Exec(`INSERT INTO orders (id, status, accrual, user_login) VALUES ($1, $2, $3, $4)`, order.Number, order.Status, order.Accrual, login)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func UpdateOrder(order models.Order) {
 	DB.Exec(`UPDATE orders SET (status, accrual) = ($1, $2) WHERE id = $3`, order.Status, order.Accrual, order.Number)
-}
-
-func FindOrder(orderNumber string) (string, bool) {
-	row := DB.QueryRow(`SELECT user_login FROM orders WHERE id = $1`, orderNumber)
-	var login string
-	err := row.Scan(&login)
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
-		return "", false
-	}
-	return login, true
 }
 
 func GetUsersOrders(login string) []models.Order {

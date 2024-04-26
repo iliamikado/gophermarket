@@ -2,6 +2,7 @@ package router
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -37,11 +38,15 @@ func register(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if db.IsLoginExist(user.Login) {
+	err = db.AddNewUser(user.Login, user.Password)
+	if errors.Is(err, db.UserAlreadyExistsError) {
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
-	db.AddNewUser(user.Login, user.Password)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	http.SetCookie(w, &http.Cookie{Name: "JWT", Value: buildJWTString(user.Login), Path: "/"})
 	w.WriteHeader(http.StatusOK)
 }
@@ -77,17 +82,20 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	ordersUserLogin, exists := db.FindOrder(number)
-	if exists {
-		if ordersUserLogin == login {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			w.WriteHeader(http.StatusConflict)
-		}
+
+	order := models.Order{Number: number, Status: "NEW"}
+	err = db.AddNewOrder(order, login)
+	if errors.Is(err, db.UserAlreadyHasOrderError) {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else if errors.Is(err, db.AnotherUserAlreadyHasOrderError) {
+		w.WriteHeader(http.StatusConflict)
+		return
+	} else if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	order := models.Order{Number: number, Status: "NEW"}
-	db.AddNewOrder(order, login)
+
 	updateOrderInfo(order)
 	w.WriteHeader(http.StatusAccepted)
 }
