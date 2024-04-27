@@ -118,12 +118,7 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 func getBalance(w http.ResponseWriter, r *http.Request) {
 	login := r.Context().Value(userLoginKey{}).(string)
 	logger.Log("Getting balance for login - " + login)
-	orders := db.GetUsersOrders(login)
-	var sum float64 = 0
-	for _, order := range orders {
-		sum += order.Accrual
-	}
-	withdrawn := db.GetWithdrawn(login)
+	sum, withdrawn := db.GetBalance(login)
 	logger.Log(fmt.Sprintf("Sum in orders = %g, withdrawn = %g", sum, withdrawn))
 	ans := models.Balance{Current: sum - withdrawn, Withdrawn: withdrawn}
 	body, _ := json.Marshal(ans)
@@ -141,19 +136,11 @@ func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	orders := db.GetUsersOrders(login)
-	var sum float64 = 0
-	for _, order := range orders {
-		sum += order.Accrual
-	}
-	alreadyWithdrawn := db.GetWithdrawn(login)
-	logger.Log(fmt.Sprintf("Sum in orders = %g, alreadyWothdrawn = %g, want to withdraw = %g", sum, alreadyWithdrawn, withdrawReq.Sum))
-	if sum - alreadyWithdrawn < withdrawReq.Sum {
+	err := db.Withdraw(login, withdrawReq.Order, withdrawReq.Sum)
+	if errors.Is(err, db.NotEnoughPointsError) {
 		w.WriteHeader(http.StatusPaymentRequired)
 		return
 	}
-
-	db.Withdraw(login, withdrawReq.Order, withdrawReq.Sum)
 	w.WriteHeader(http.StatusOK)
 }
 

@@ -17,6 +17,7 @@ var DB *sql.DB
 var UserAlreadyExistsError error
 var UserAlreadyHasOrderError error
 var AnotherUserAlreadyHasOrderError error
+var NotEnoughPointsError error
 
 func Initialize(host string) {
 	db, _ := sql.Open("pgx", host)
@@ -26,6 +27,7 @@ func Initialize(host string) {
 	UserAlreadyExistsError = errors.New("user with this login already exists")
 	UserAlreadyHasOrderError = errors.New("user already has this order")
 	AnotherUserAlreadyHasOrderError = errors.New("another user already has this order")
+	NotEnoughPointsError = errors.New("not enough points")
 }
 
 func CreateTables() {
@@ -135,8 +137,20 @@ func GetUsersOrders(login string) []models.Order {
 	return ans
 }
 
-func Withdraw(login, order string, amount float64) {
+func Withdraw(login, order string, amount float64) error {
 	tx, _ := DB.Begin()
+	row := tx.QueryRow(`SELECT SUM(accrual) FROM orders WHERE user_login = $1 group by user_login`, login)
+	var sum float64
+	row.Scan(&sum)
+	row = tx.QueryRow(`SELECT withdrawn FROM users WHERE login = $1`, login)
+	var withdrawn float64
+	row.Scan(&withdrawn)
+
+	if sum - withdrawn < amount {
+		tx.Rollback()
+		return NotEnoughPointsError
+	}
+
 	_, e1 := tx.Exec(`UPDATE users SET withdrawn = withdrawn + $1 WHERE login = $2`, amount, login)
 	_, e2 := tx.Exec(`INSERT INTO withdrawals (order_number, sum, user_login) VALUES ($1, $2, $3)`, order, amount, login)
 	if e1 != nil || e2 != nil {
@@ -144,17 +158,19 @@ func Withdraw(login, order string, amount float64) {
 		logger.Log(e2)
 		tx.Rollback()
 	}
-	err := tx.Commit()
-	if err != nil {
-		logger.Log(err)
-	}
+	return tx.Commit()
 }
 
-func GetWithdrawn(login string) float64 {
-	row := DB.QueryRow(`SELECT withdrawn FROM users WHERE login = $1`, login)
+func GetBalance(login string) (float64, float64) {
+	tx, _ := DB.Begin()
+	row := tx.QueryRow(`SELECT SUM(accrual) FROM orders WHERE user_login = $1 group by user_login`, login)
+	var sum float64
+	row.Scan(&sum)
+	row = tx.QueryRow(`SELECT withdrawn FROM users WHERE login = $1`, login)
 	var withdrawn float64
 	row.Scan(&withdrawn)
-	return withdrawn
+	tx.Commit()
+	return sum, withdrawn
 }
 
 func GetAllWithdrawals(login string) []models.WithdrawLog {
