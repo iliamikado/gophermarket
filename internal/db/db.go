@@ -54,12 +54,9 @@ func CreateTables() {
 func AddNewUser(login, password string) error {
 	tx, _ := DB.Begin()
 
-	row := tx.QueryRow(`SELECT * FROM users WHERE login = $1`, login)
+	row := tx.QueryRow(`SELECT login FROM users WHERE login = $1`, login)
 	err := row.Scan()
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		tx.Rollback()
-		return err
-	} else if err == nil {
+	if !errors.Is(err, sql.ErrNoRows) {
 		tx.Rollback()
 		return UserAlreadyExistsError
 	}

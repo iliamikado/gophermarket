@@ -25,7 +25,6 @@ func AppRouter() *chi.Mux {
 		r.Post("/api/user/balance/withdraw", pointsWithdraw)
 		r.Get("/api/user/withdrawals", getWithdrawals)
 	})
-	r.Get("/mock/api/orders/{number}", mockedGetOrderStatus)
 	return r
 }
 
@@ -69,7 +68,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 }
 
 func postOrder(w http.ResponseWriter, r *http.Request) {
-	login := r.Context().Value(userLoginKey{}).(string)
+	login := getLogin(r)
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	number := string(body)
@@ -101,7 +100,7 @@ func postOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func getOrders(w http.ResponseWriter, r *http.Request) {
-	login := r.Context().Value(userLoginKey{}).(string)
+	login := getLogin(r)
 	orders := db.GetUsersOrders(login)
 	logger.Log("Get orders from login " + login + ":")
 	logger.Log(orders)
@@ -116,7 +115,7 @@ func getOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request) {
-	login := r.Context().Value(userLoginKey{}).(string)
+	login := getLogin(r)
 	logger.Log("Getting balance for login - " + login)
 	sum, withdrawn := db.GetBalance(login)
 	logger.Log(fmt.Sprintf("Sum in orders = %g, withdrawn = %g", sum, withdrawn))
@@ -127,7 +126,7 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
-	login := r.Context().Value(userLoginKey{}).(string)
+	login := getLogin(r)
 	logger.Log("Withdraw points from login - " + login)
 	var withdrawReq models.WithdrawRequest
 	readBody(r, &withdrawReq)
@@ -145,7 +144,7 @@ func pointsWithdraw(w http.ResponseWriter, r *http.Request) {
 }
 
 func getWithdrawals(w http.ResponseWriter, r *http.Request) {
-	login := r.Context().Value(userLoginKey{}).(string)
+	login := getLogin(r)
 	withdrawals := db.GetAllWithdrawals(login)
 	if len(withdrawals) == 0 {
 		w.WriteHeader(http.StatusNoContent)
@@ -158,19 +157,14 @@ func getWithdrawals(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func mockedGetOrderStatus(w http.ResponseWriter, r *http.Request) {
-	number := chi.URLParam(r, "number")
-	order := models.Order{Number: number, Status: "PROCESSED", Accrual: float64(455.34)}
-	body, _ := json.Marshal(order)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(body)
-}
-
 func readBody(r *http.Request, dst interface{}) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	defer r.Body.Close()
 	err := dec.Decode(dst)
 	return err
+}
+
+func getLogin(r *http.Request) string {
+	return r.Context().Value(userLoginKey{}).(string)
 }
